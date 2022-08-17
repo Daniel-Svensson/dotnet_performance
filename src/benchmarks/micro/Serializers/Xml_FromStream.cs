@@ -28,6 +28,7 @@ namespace MicroBenchmarks.Serializers
         private MemoryStream memoryStream;
         private byte[] memoryBytes;
         private XmlDictionaryReader xmlDictionaryReader;
+        const int IterationsBinaryXml = 100;
 
         [GlobalSetup(Target = nameof(XmlSerializer_))]
         public void SetupXmlSerializer()
@@ -73,18 +74,28 @@ namespace MicroBenchmarks.Serializers
             memoryStream.Position = 0;
             dataContractSerializer = new DataContractSerializer(typeof(T));
             using (XmlDictionaryWriter writer = XmlDictionaryWriter.CreateBinaryWriter(memoryStream, null, null, ownsStream: false))
-               dataContractSerializer.WriteObject(writer, value);
+            {
+                writer.WriteStartElement("root");
+                for (int i = 0; i < IterationsBinaryXml; ++i)
+                   dataContractSerializer.WriteObject(writer, value);
+            }
 
             memoryBytes = memoryStream.ToArray();
             xmlDictionaryReader = XmlDictionaryReader.CreateBinaryReader(memoryBytes, XmlDictionaryReaderQuotas.Max);
         }
 
         [BenchmarkCategory(Categories.Libraries)]
-        [Benchmark(Description = nameof(XmlDictionaryReader))]
+        [Benchmark(Description = nameof(XmlDictionaryReader), OperationsPerInvoke = IterationsBinaryXml)]
         public T DataContractSerializer_BinaryXml_()
         {
             ((IXmlBinaryReaderInitializer)xmlDictionaryReader).SetInput(memoryBytes, 0, memoryBytes.Length, null, XmlDictionaryReaderQuotas.Max, null, null);
-            return (T)dataContractSerializer.ReadObject(xmlDictionaryReader);
+            xmlDictionaryReader.ReadStartElement("root");
+
+            T result = default;
+            for (int i = 0; i < IterationsBinaryXml; ++i)
+                result = (T)dataContractSerializer.ReadObject(xmlDictionaryReader);
+
+            return result;
         }
 
       // YAXSerializer is not included in the benchmarks because it does not allow to deserialize from stream (only from file and string)

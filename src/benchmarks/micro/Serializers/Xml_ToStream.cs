@@ -59,7 +59,6 @@ namespace MicroBenchmarks.Serializers
         public void DataContractSerializer_BinaryXml_()
         {
             memoryStream.Position = 0;
-            ((IXmlBinaryWriterInitializer)xmlDictionaryWriter).SetOutput(memoryStream, null, null, ownsStream: false);
 
             dataContractSerializer.WriteObject(xmlDictionaryWriter, value);
         }
